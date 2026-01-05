@@ -35,34 +35,37 @@ We simulate customers, accounts and transactions in PostgreSQL, capture changes 
 
 ## 📂 Repository Structure
 
+```text
 banking-ml-modern-datastack/
-├── .github/workflows/          # CI/CD pipelines (tests, dbt, ML)
-├── banking_dbt/                # dbt project (Snowflake)
+├── .github/
+│   └── workflows/                 # CI/CD pipelines (tests, dbt, ML)
+├── banking_dbt/                   # dbt project (Snowflake)
 │   ├── models/
-│   │   ├── staging/            # Bronze / Silver staging
-│   │   ├── marts/              # Facts, dimensions, feature store (Gold)
+│   │   ├── staging/               # Bronze / Silver staging models
+│   │   ├── marts/                 # Facts, dimensions, feature store (Gold)
 │   │   └── sources.yml
-│   ├── snapshots/              # SCD2 snapshots (optional)
+│   ├── snapshots/                 # SCD Type 2 snapshots (optional)
 │   └── dbt_project.yml
-├── data-generator/             # Data simulation
+├── data-generator/                # Synthetic data generation
 │   └── faker_generator.py
-├── ml/                         # ML training & inference
+├── ml/                            # Machine Learning
 │   ├── train_model.py
 │   └── predict_model.py
-├── docker/                     # Airflow DAGs & config
-│   ├── dags/
-│   │   ├── cdc_to_minio.py
-│   │   ├── minio_to_snowflake.py
-│   │   ├── dbt_transformations.py
-│   │   └── ml_pipeline.py
-├── kafka-debezium/             # Kafka & Debezium connector configs
+├── docker/                        # Airflow DAGs & configuration
+│   └── dags/
+│       ├── cdc_to_minio.py
+│       ├── minio_to_snowflake.py
+│       ├── dbt_transformations.py
+│       └── ml_pipeline.py
+├── kafka-debezium/                # Kafka & Debezium connectors
 │   └── generate_and_post_connector.py
-├── postgres/                   # PostgreSQL schema & seeds
+├── postgres/                      # PostgreSQL schema & seeds
 │   └── schema.sql
-├── docker-compose.yml          # All services (Postgres, Kafka, MinIO, Airflow...)
+├── docker-compose.yml
 ├── dockerfile-airflow.dockerfile
-├── requirements.txt            # Python dependencies (consumer, ML, dbt)
+├── requirements.txt
 └── README.md
+
 
 
 ## ⚙️ Step-by-Step Implementation
