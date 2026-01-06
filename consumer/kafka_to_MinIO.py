@@ -85,20 +85,11 @@ for message in consumer:
     topic = message.topic
     event = message.value
     payload = event.get("payload", {})
-
-    # Debezium operation type
-    op = payload.get("op")  # c, u, d, r
-
-    if op in ("c", "u", "r"):  # create, update, snapshot read
-        record = payload.get("after")
-    elif op == "d":  # delete
-        record = payload.get("before")
-    else:
-        record = None
+    record = payload.get("after")  # Only take the actual row
 
     if record:
         buffer[topic].append(record)
-        print(f"[{topic}] -> {record}")
+        print(f"[{topic}] -> {record}")  # Debugging
 
     if len(buffer[topic]) >= batch_size:
         write_to_minio(topic.split('.')[-1], buffer[topic])
