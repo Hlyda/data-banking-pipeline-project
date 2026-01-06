@@ -100,7 +100,7 @@ def run_iteration():
     for _ in range(NUM_TRANSACTIONS):
         account_id = random.choice(accounts) # sender account
         txn_type = random.choice(txn_types)
-        amount = random_money(Decimal("1.00"), Decimal(str(MAX_TXN_AMOUNT))) #make sure that account id picked in first line is not the same as related account (receiver account) id for transfers 
+        amount = round(random.uniform(1, MAX_TXN_AMOUNT), 2) #make sure that account id picked in first line is not the same as related account (receiver account) id for transfers 
         related_account = None
         if txn_type == "TRANSFER" and len(accounts) > 1:
             related_account = random.choice([a for a in accounts if a != account_id])
