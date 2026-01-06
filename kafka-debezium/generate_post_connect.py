@@ -41,14 +41,32 @@ connector_config = {
 url = "http://localhost:8083/connectors"
 headers = {"Content-Type": "application/json"}
 
-response = requests.post(url, headers=headers, data=json.dumps(connector_config))
-
-# -----------------------------
-# Debug/Output
-# -----------------------------
-if response.status_code == 201:
-    print("✅ Connector created successfully!")
-elif response.status_code == 409:
-    print("⚠️ Connector already exists.")
-else:
-    print(f"❌ Failed to create connector ({response.status_code}): {response.text}")
+try:
+    response = requests.post(url, headers=headers, data=json.dumps(connector_config), timeout=5)
+    
+    # -----------------------------
+    # Debug/Output
+    # -----------------------------
+    if response.status_code == 201:
+        print("✅ Connector created successfully!")
+    elif response.status_code == 409:
+        print("⚠️ Connector already exists.")
+    else:
+        print(f"❌ Failed to create connector ({response.status_code}): {response.text}")
+        
+except requests.exceptions.ConnectionError:
+    print("❌ Connection Error: Cannot connect to Kafka Connect REST API at http://localhost:8083")
+    print("\n💡 Make sure Kafka Connect is running:")
+    print("   - If using Docker Compose, run: docker-compose up -d")
+    print("   - Check if the service is running: docker ps | grep connect")
+    print("   - Verify the service is accessible: curl http://localhost:8083/connectors")
+    exit(1)
+    
+except requests.exceptions.Timeout:
+    print("❌ Timeout: Kafka Connect REST API did not respond in time")
+    print("💡 The service might be starting up. Please wait a moment and try again.")
+    exit(1)
+    
+except Exception as e:
+    print(f"❌ Unexpected error: {type(e).__name__}: {str(e)}")
+    exit(1)
