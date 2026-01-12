@@ -8,30 +8,23 @@ import sys
 import os
 from dotenv import load_dotenv
 
-load_dotenv() # load environment variables from .env file
+load_dotenv()  # charge les variables d'environnement depuis .env
 
 # -----------------------------
-# Project configuration (safe to hardcode here)
+# Configuration du projet
 # -----------------------------
-
-# Data generation config
-NUM_CUSTOMERS = 10 # number of customers to generate per iteration
-ACCOUNTS_PER_CUSTOMER = 2 # number of accounts per customer
-NUM_TRANSACTIONS = 50 # number of transactions to generate per iteration
-MAX_TXN_AMOUNT = 1000.00 # maximum transaction amount
+NUM_CUSTOMERS = 10          # nombre de clients par itération
+ACCOUNTS_PER_CUSTOMER = 2   # comptes par client
+NUM_TRANSACTIONS = 50       # transactions par itération
+MAX_TXN_AMOUNT = 1000.00    # montant max d'une transaction
 CURRENCY = "EUR"
-
-# Non-zero initial balances
 INITIAL_BALANCE_MIN = Decimal("10.00")
 INITIAL_BALANCE_MAX = Decimal("1000.00")
-
-# Loop config
 DEFAULT_LOOP = True
 SLEEP_SECONDS = 2
 
-# CLI override (run once mode)
-# it allows to run the script just one time instead of looping indefinitely
-parser = argparse.ArgumentParser(description="Run fake data generator")
+# CLI pour exécuter une seule itération
+parser = argparse.ArgumentParser(description="Fake data generator with balance check")
 parser.add_argument("--once", action="store_true", help="Run a single iteration and exit")
 args = parser.parse_args()
 LOOP = not args.once and DEFAULT_LOOP
@@ -41,16 +34,13 @@ LOOP = not args.once and DEFAULT_LOOP
 # -----------------------------
 fake = Faker()
 
-# Generate a random monetary amount between min_val and max_val
 def random_money(min_val: Decimal, max_val: Decimal) -> Decimal:
     val = Decimal(str(random.uniform(float(min_val), float(max_val))))
     return val.quantize(Decimal("0.01"), rounding=ROUND_DOWN)
 
 # -----------------------------
-# Connect to Postgres
+# Connexion à PostgreSQL
 # -----------------------------
-
-# Set up Postgres connection using environment variables
 conn = psycopg2.connect(
     host=os.getenv("POSTGRES_HOST"),
     port=os.getenv("POSTGRES_PORT"),
@@ -59,17 +49,15 @@ conn = psycopg2.connect(
     password=os.getenv("POSTGRES_PASSWORD"),
 )
 conn.autocommit = True
-cur = conn.cursor() #connecting to an sql server and write queries inside
+cur = conn.cursor()
 
 # -----------------------------
-# Core generation logic (one iteration)
+# Génération des données
 # -----------------------------
-
-# Run a single iteration of data generation
-"""Generate customers, accounts, and transactions in one iteration."""
 def run_iteration():
     customers = []
-    # 1. Generate customers
+
+    # 1. Générer des clients
     for _ in range(NUM_CUSTOMERS):
         first_name = fake.first_name()
         last_name = fake.last_name()
@@ -82,7 +70,7 @@ def run_iteration():
         customer_id = cur.fetchone()[0]
         customers.append(customer_id)
 
-    # 2. Generate accounts
+    # 2. Générer des comptes
     accounts = []
     for customer_id in customers:
         for _ in range(ACCOUNTS_PER_CUSTOMER):
@@ -95,12 +83,12 @@ def run_iteration():
             account_id = cur.fetchone()[0]
             accounts.append(account_id)
 
-    # 3. Generate transactions
+    # 3. Générer des transactions
     txn_types = ["DEPOSIT", "WITHDRAWAL", "TRANSFER"]
     for _ in range(NUM_TRANSACTIONS):
-        account_id = random.choice(accounts) # sender account
+        account_id = random.choice(accounts)
         txn_type = random.choice(txn_types)
-        amount = round(random.uniform(1, MAX_TXN_AMOUNT), 2) #make sure that account id picked in first line is not the same as related account (receiver account) id for transfers 
+        amount = round(random.uniform(1, MAX_TXN_AMOUNT), 2)
         related_account = None
         if txn_type == "TRANSFER" and len(accounts) > 1:
             related_account = random.choice([a for a in accounts if a != account_id])
@@ -110,15 +98,32 @@ def run_iteration():
             (account_id, txn_type, amount, related_account),
         )
 
-    print(f"✅ Generated {len(customers)} customers, {len(accounts)} accounts, {NUM_TRANSACTIONS} transactions.")
+    print(f"\n✅ Generated {len(customers)} customers, {len(accounts)} accounts, {NUM_TRANSACTIONS} transactions.")
+
+    # 4. Afficher les soldes après transactions
+    print("\n--- Balance Check ---")
+    cur.execute("""
+    SELECT a.id, a.balance, COALESCE(SUM(
+        CASE 
+            WHEN t.txn_type='DEPOSIT' THEN t.amount
+            WHEN t.txn_type='WITHDRAWAL' THEN -t.amount
+            WHEN t.txn_type='TRANSFER' AND t.account_id = a.id THEN -t.amount
+            WHEN t.txn_type='TRANSFER' AND t.related_account_id = a.id THEN t.amount
+        END
+    ),0) AS net_txn
+    FROM accounts a
+    LEFT JOIN transactions t ON a.id = t.account_id OR a.id = t.related_account_id
+    GROUP BY a.id, a.balance
+    ORDER BY a.id;
+    """)
+    for row in cur.fetchall():
+        account_id, initial_balance, net_txn = row
+        final_balance = initial_balance + net_txn
+        print(f"Account {account_id}: initial={initial_balance}, net_txn={net_txn}, final={final_balance}")
 
 # -----------------------------
-# Main loop
+# Boucle principale
 # -----------------------------
-
-# Run iterations
-# Handle graceful shutdown on Ctrl+C
-# Wrap in try-except-finally to ensure cleanup
 try:
     iteration = 0
     while True:
@@ -130,7 +135,6 @@ try:
             break
         time.sleep(SLEEP_SECONDS)
 
-# exec the loop when clic Ctrl+C
 except KeyboardInterrupt:
     print("\nInterrupted by user. Exiting gracefully...")
 
