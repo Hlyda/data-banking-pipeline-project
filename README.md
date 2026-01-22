@@ -113,7 +113,6 @@ This project is inspired by several existing modern data stack projects, in part
 - **Banking Modern Data Stack** by Jaya Chandra Kadiveti (PostgreSQL, Kafka, Debezium, MinIO, Snowflake, dbt, Airflow, CI/CD).  
 - Other public end‑to‑end data engineering and MLOps projects (real‑time CDC, Snowflake + dbt + Airflow architectures, and fraud‑detection use cases).
 
-The goal was not to copy these repositories, but to extend the architecture with an explicit **MLOps layer** (feature store + ML training & inference) and adapt it to our own academic project.
 
 ## 👥 Project Team
 
